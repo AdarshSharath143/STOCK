@@ -57,6 +57,13 @@ from chatbot.chat_history import (
     update_conversation_title
 )
 
+import os
+from flask import Flask, jsonify, request, send_from_directory
+from flask_cors import CORS
+
+app = Flask(__name__, static_folder="../frontend/dist", static_url_path="/")
+CORS(app)
+
 # Initialize Flask app
 # Serve static files from frontend/dist (for React build)
 static_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend', 'dist')
@@ -710,6 +717,16 @@ def serve_frontend(path):
         return send_from_directory(app.static_folder, 'index.html')
     
     return jsonify({'error': 'Frontend not built. Run: cd frontend && npm run build'}), 404
+
+# Serve React frontend
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, "index.html")
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
