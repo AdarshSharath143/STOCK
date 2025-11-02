@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_caching import Cache
 from flask_jwt_extended import JWTManager
@@ -58,7 +58,9 @@ from chatbot.chat_history import (
 )
 
 # Initialize Flask app
-app = Flask(__name__)
+# Serve static files from frontend/dist (for React build)
+static_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend', 'dist')
+app = Flask(__name__, static_folder=static_folder, static_url_path="")
 CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
 # JWT Configuration
@@ -688,6 +690,26 @@ def get_simulator_data():
             'error': str(e),
             'success': False
         }), 500
+
+# Serve React frontend - catch-all route for client-side routing
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve_frontend(path):
+    """Serve React frontend for all non-API routes"""
+    # Don't serve static files for API routes
+    if path.startswith('api/'):
+        return jsonify({'error': 'Not found'}), 404
+    
+    # Serve static files if they exist (JS, CSS, images, etc.)
+    if path and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    
+    # For all other routes (React Router), serve index.html
+    # This allows client-side routing to work
+    if os.path.exists(os.path.join(app.static_folder, 'index.html')):
+        return send_from_directory(app.static_folder, 'index.html')
+    
+    return jsonify({'error': 'Frontend not built. Run: cd frontend && npm run build'}), 404
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

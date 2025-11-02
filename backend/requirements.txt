@@ -15,4 +15,5 @@ ta
 requests
 python-dotenv
 gunicorn
+waitress
 textblob==0.17.1
